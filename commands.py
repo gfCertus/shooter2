@@ -2,7 +2,7 @@
 Capa 1: Dominio y Comandos
 ==========================
 Define las acciones abstractas del juego. Son independientes de cualquier
-teclado, raton o red; solo representan la intencion del jugador.
+teclado, ratón o red; solo representan la intención del jugador.
 """
 from enum import Enum
 

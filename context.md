@@ -80,7 +80,7 @@ El código debe estar estrictamente dividido en las siguientes capas dentro del 
 
 \---
 
-## 5\. Implementación Entregada
+## 5\. Implementación Entregada (Monojugador local)
 
 El proyecto está completo y modularizado en 7 archivos, cada uno mapeado a una capa de la arquitectura limpia:
 
@@ -102,7 +102,7 @@ El proyecto está completo y modularizado en 7 archivos, cada uno mapeado a una 
 * **RN-04:** Purga de proyectiles con `y < 0` y enemigos con `y > ALTO`.
 * **RN-05:** Toda modificación de estado reside en `GameState`; la vista es de solo lectura.
 
-### Cómo ejecutar
+### Cómo ejecutar (monojugador local)
 
 ```bash
 python main.py
@@ -110,9 +110,58 @@ python main.py
 
 Controles: flechas izquierda/derecha (o A/D) para moverse, espacio para disparar.
 
+\---
+
+## 6\. Modo Multijugador Online (Red Local)
+
+El juego soporta modo **cliente-servidor autoritativo** para 2 jugadores en red local. El servidor ejecuta la lógica del juego (`GameState`) y es la única fuente de verdad; los clientes solo envían inputs y renderizan snapshots recibidos.
+
+### Archivos de red
+
+| Archivo | Rol |
+|---------|-----|
+| `common.py` | Constantes de red, protocolo JSON y funciones de serialización |
+| `server.py` | Servidor autoritativo (puerto 5555, acepta 2 clientes: p1 y p2) |
+| `client.py` | Cliente que se conecta, envía inputs y renderiza el snapshot |
+| `main.py` | Punto de entrada: `python main.py server` o `python main.py client [host]` |
+
+### Arquitectura de red
+
+1. El servidor escucha en `0.0.0.0:5555` y acepta exactamente 2 clientes.
+2. Cada cliente recibe su identificador (`p1` o `p2`) tras conectar.
+3. Los clientes envían sus inputs (como lista de `Command`) al servidor cada frame.
+4. El servidor procesa los inputs, actualiza `GameState` a 60 FPS y transmite el `snapshot` a ambos clientes.
+5. Cada cliente renderiza únicamente desde el snapshot recibido (vista de solo lectura).
+
+### Posiciones y controles por jugador
+
+| Jugador | Posición inicial | Teclas movimiento | Tecla disparo |
+|---------|-----------------|-------------------|---------------|
+| `p1` | Borde inferior izquierda (x=150) | Flechas Izq/Der o A/D | Espacio |
+| `p2` | Borde inferior derecha (x=610) | A/D o Flechas Izq/Der | Shift Izquierdo |
+
+Cada jugador tiene su **puntaje individual**, mostrado en su respectiva esquina (P1 verde a la izquierda, P2 cian a la derecha). La bala conoce a su dueño (`player_id`), por lo que el puntaje se asigna correctamente al jugador que disparó.
+
+### Cómo ejecutar (multijugador)
+
+Terminal 1 (servidor):
+```bash
+python main.py server
+```
+
+Terminal 2 (cliente 1, misma máquina):
+```bash
+python main.py client 127.0.0.1
+```
+
+Terminal 3 (cliente 2, otra máquina de la red):
+```bash
+python main.py client <IP_del_servidor>
+```
+
 ### Estado del repositorio
 
 * Rama: `main`
-* Commit final: `99d0651` — `refactor: modularizar código en capas arquitectónicas`
+* Commit final: `82fca0f` — `docs: actualizar context.md con sección de implementación entregada`
 * Repositorio remoto: `https://github.com/gfCertus/shooter2.git` (usuario `gfcertus`)
 

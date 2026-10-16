@@ -1,11 +1,12 @@
 """
 Capa 3: Estado Central (GameState)
 ===================================
-Mantiene el estado soberano del juego (RN-05). Toda modificacion de vida,
-puntaje, creacion o eliminacion de entidades reside unicamente aqui. La vista
+Mantiene el estado soberano del juego (RN-05). Toda modificación de vida,
+puntaje, creación o eliminación de entidades reside únicamente aquí. La vista
 es de solo lectura.
 
-No importa pygame: trabaja con tipos nativos y las clases de dominio.
+Soporta hasta 2 jugadores con puntaje individual. No importa pygame:
+trabaja con tipos nativos y las clases de dominio.
 """
 from __future__ import annotations
 
@@ -17,7 +18,7 @@ from domain import Bullet, Enemy, Player
 
 
 class GameState:
-    """Estado central y soberano del juego."""
+    """Estado central y soberano del juego (servidor autoritativo)."""
 
     def __init__(self, width: int = 800, height: int = 600) -> None:
         self.width: int = width
@@ -25,17 +26,22 @@ class GameState:
         self.players: Dict[str, Player] = {}
         self.bullets: List[Bullet] = []
         self.enemies: List[Enemy] = []
-        self.score: int = 0
+        self.scores: Dict[str, int] = {}
 
-        # Temporizador de generacion de enemigos.
+        # Temporizador de generación de enemigos.
         self.enemy_spawn_timer: float = 0.0
         self.enemy_spawn_interval: float = 1.0  # segundos
+
+    def register_player(self, player_id: str, x: float, y: float) -> None:
+        """Registra un jugador en el estado (servidor)."""
+        self.players[player_id] = Player(player_id=player_id, x=x, y=y)
+        self.scores[player_id] = 0
 
     # ------------------------------------------------------------------
     # Procesamiento de comandos (abstracciones de Capa 1)
     # ------------------------------------------------------------------
     def process_command(self, player_id: str, command: Command, current_time: float) -> None:
-        """Ejecuta la accion indicada por el comando sobre el jugador."""
+        """Ejecuta la acción indicada por el comando sobre el jugador."""
         player = self.players.get(player_id)
         if player is None:
             return
@@ -53,18 +59,20 @@ class GameState:
         player.x = min(max(player.x, min_x), max_x)
 
     def _shoot(self, player: Player, current_time: float) -> None:
-        """Dispara un proyectil respetando la cadencia maxima (RN-01)."""
+        """Dispara un proyectil respetando la cadencia máxima (RN-01)."""
         if current_time - player.last_shot >= player.reload_time:
             bullet_x = player.x + player.width / 2.0
             bullet_y = player.y
-            self.bullets.append(Bullet(x=bullet_x, y=bullet_y))
+            self.bullets.append(
+                Bullet(x=bullet_x, y=bullet_y, player_id=player.player_id)
+            )
             player.last_shot = current_time
 
     # ------------------------------------------------------------------
-    # Simulacion logica en un tick
+    # Simulación lógica en un tick
     # ------------------------------------------------------------------
     def update(self, current_time: float, dt: float) -> None:
-        """Avanza la simulacion un tick: movimiento, colisiones, purgado y spawn."""
+        """Avanza la simulación un tick: movimiento, colisiones, purgado y spawn."""
         self._move_entities()
         self._resolve_collisions()
         self._purge_entities()          # RN-04
@@ -77,7 +85,7 @@ class GameState:
             enemy.y += enemy.speed
 
     def _resolve_collisions(self) -> None:
-        """RN-02: impacto bala-enemigo destruye ambas y otorga +10 puntos."""
+        """RN-02: impacto bala-enemigo destruye ambas y otorga +10 al jugador dueño de la bala."""
         bullets_to_remove: List[int] = []
         enemies_to_remove: List[int] = []
 
@@ -91,10 +99,13 @@ class GameState:
                 ):
                     bullets_to_remove.append(bi)
                     enemies_to_remove.append(ei)
-                    self.score += 10
+                    # Puntaje individual para el jugador que disparó la bala
+                    self.scores[bullet.player_id] = (
+                        self.scores.get(bullet.player_id, 0) + 10
+                    )
                     break  # Una bala solo destruye un enemigo
 
-        # Eliminar en orden inverso para no invalidar indices
+        # Eliminar en orden inverso para no invalidar índices
         for idx in sorted(set(bullets_to_remove), reverse=True):
             self.bullets.pop(idx)
         for idx in sorted(set(enemies_to_remove), reverse=True):
@@ -105,7 +116,7 @@ class GameState:
         rx: float, ry: float, rw: float, rh: float,
         cx: float, cy: float, radius: float,
     ) -> bool:
-        """Deteccion algebraica de colision rectangulo-circulo (sin pygame)."""
+        """Detección algebraica de colisión rectangulo-círculo (sin pygame)."""
         closest_x = max(rx, min(cx, rx + rw))
         closest_y = max(ry, min(cy, ry + rh))
         dx = cx - closest_x
@@ -128,11 +139,11 @@ class GameState:
     # Snapshot (DTO / JSON-like, solo tipos nativos)
     # ------------------------------------------------------------------
     def get_snapshot(self) -> Dict[str, Any]:
-        """Devuelve una representacion plana del estado actual (solo lectura)."""
+        """Devuelve una representación plana del estado actual (solo lectura)."""
         return {
             "width": self.width,
             "height": self.height,
-            "score": self.score,
+            "scores": self.scores,               # Puntaje individual por jugador
             "players": [
                 {
                     "player_id": p.player_id,
@@ -144,7 +155,13 @@ class GameState:
                 for p in self.players.values()
             ],
             "bullets": [
-                {"x": b.x, "y": b.y, "width": b.width, "height": b.height}
+                {
+                    "x": b.x,
+                    "y": b.y,
+                    "width": b.width,
+                    "height": b.height,
+                    "player_id": b.player_id,
+                }
                 for b in self.bullets
             ],
             "enemies": [
