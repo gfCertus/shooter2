@@ -78,3 +78,41 @@ El código debe estar estrictamente dividido en las siguientes capas dentro del 
 2. Asegúrate de que el archivo funcione tanto con `pygame` tradicional como con `pygame-ce`.
 3. Incluye comentarios breves identificando cada capa arquitectónica para su presentación y análisis.
 
+\---
+
+## 5\. Implementación Entregada
+
+El proyecto está completo y modularizado en 7 archivos, cada uno mapeado a una capa de la arquitectura limpia:
+
+| Archivo | Capa | Contenido |
+|---------|------|-----------|
+| `compat.py` | Utilidad | Compatibilidad `pygame` / `pygame-ce` (try/except de import) |
+| `commands.py` | Capa 1: Dominio y Comandos | `Enum Command` con `MOVE_LEFT`, `MOVE_RIGHT`, `SHOOT` |
+| `domain.py` | Capa 2: Modelo del Dominio | `Player`, `Bullet`, `Enemy` — Puro Python, sin `pygame` |
+| `state.py` | Capa 3: Estado Central | `GameState` con `process_command`, `update`, `get_snapshot` |
+| `input_handler.py` | Capa 4: Captura de Entradas | `LocalInputHandler` que mapea teclas a `Command` |
+| `renderer.py` | Capa 5: Renderizador | `PygameRenderer` que dibuja exclusivamente desde `get_snapshot()` |
+| `main.py` | Capa 6: Orquestador | Ventana 800×600 a 60 FPS y bucle secuencial de 5 etapas |
+
+### Reglas de negocio implementadas (RN-01 a RN-05)
+
+* **RN-01:** Cadencia máxima de disparo de 200 ms respetada en `GameState._shoot`.
+* **RN-02:** Impacto bala-enemigo destruye ambas entidades y suma +10 puntos.
+* **RN-03:** Posición horizontal `x` de la nave restringida a `[0, ANCHO - ancho_nave]`.
+* **RN-04:** Purga de proyectiles con `y < 0` y enemigos con `y > ALTO`.
+* **RN-05:** Toda modificación de estado reside en `GameState`; la vista es de solo lectura.
+
+### Cómo ejecutar
+
+```bash
+python main.py
+```
+
+Controles: flechas izquierda/derecha (o A/D) para moverse, espacio para disparar.
+
+### Estado del repositorio
+
+* Rama: `main`
+* Commit final: `99d0651` — `refactor: modularizar código en capas arquitectónicas`
+* Repositorio remoto: `https://github.com/gfCertus/shooter2.git` (usuario `gfcertus`)
+
