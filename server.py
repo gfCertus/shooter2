@@ -94,14 +94,25 @@ class GameServer:
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((self.host, self.port))
         server.listen(2)
+        # Timeout para poder detectar KeyboardInterrupt mientras esperamos clientes
+        server.settimeout(1.0)
         print(f"[Servidor] Escuchando en {self.host}:{self.port}", flush=True)
 
         self.running = True
 
-        # Aceptar exactamente 2 clientes
+        # Aceptar exactamente 2 clientes (se puede detener con Ctrl+C mientras espera)
         player_ids = ["p1", "p2"]
         for pid in player_ids:
-            conn, addr = server.accept()
+            while self.running:
+                try:
+                    conn, addr = server.accept()
+                    break
+                except socket.timeout:
+                    continue
+                except OSError:
+                    break
+            if not self.running:
+                break
             print(f"[Servidor] Jugador {pid} conectado desde {addr}", flush=True)
             with self.lock:
                 self.clients[pid] = conn
@@ -111,7 +122,8 @@ class GameServer:
             )
             t.start()
 
-        print("[Servidor] ¡Dos jugadores conectados! Iniciando bucle de juego...", flush=True)
+        if self.running:
+            print("[Servidor] ¡Dos jugadores conectados! Iniciando bucle de juego...", flush=True)
         last_time = time.time()
 
         try:
