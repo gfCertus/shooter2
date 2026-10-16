@@ -13,6 +13,7 @@ import time
 from common import HOST_SERVER, PORT, BUFFER_SIZE, encode, MSG_JOIN, MSG_INPUT
 from state import GameState
 from commands import Command
+import sys
 
 
 class GameServer:
@@ -93,7 +94,7 @@ class GameServer:
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         server.bind((self.host, self.port))
         server.listen(2)
-        print(f"[Servidor] Escuchando en {self.host}:{self.port}")
+        print(f"[Servidor] Escuchando en {self.host}:{self.port}", flush=True)
 
         self.running = True
 
@@ -101,7 +102,7 @@ class GameServer:
         player_ids = ["p1", "p2"]
         for pid in player_ids:
             conn, addr = server.accept()
-            print(f"[Servidor] Jugador {pid} conectado desde {addr}")
+            print(f"[Servidor] Jugador {pid} conectado desde {addr}", flush=True)
             with self.lock:
                 self.clients[pid] = conn
                 self.input_queues[pid] = []
@@ -110,7 +111,7 @@ class GameServer:
             )
             t.start()
 
-        print("[Servidor] ¡Dos jugadores conectados! Iniciando bucle de juego...")
+        print("[Servidor] ¡Dos jugadores conectados! Iniciando bucle de juego...", flush=True)
         last_time = time.time()
 
         try:
@@ -143,7 +144,7 @@ class GameServer:
                 if elapsed < target:
                     time.sleep(target - elapsed)
         except KeyboardInterrupt:
-            print("\n[Servidor] Detenido por el usuario.")
+            print("\n[Servidor] Detenido por el usuario.", flush=True)
         finally:
             self.running = False
             for conn in list(self.clients.values()):
@@ -152,8 +153,17 @@ class GameServer:
                 except OSError:
                     pass
             server.close()
-            print("[Servidor] Cerrado.")
+            print("[Servidor] Cerrado.", flush=True)
 
 
 if __name__ == "__main__":
-    GameServer().run()
+    try:
+        GameServer().run()
+    except Exception as e:
+        print(f"\n[ERROR] El servidor falló al iniciar: {e}", flush=True)
+        print("\nPresiona ENTER para cerrar...", flush=True)
+        try:
+            input()
+        except EOFError:
+            pass
+        sys.exit(1)
