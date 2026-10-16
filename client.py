@@ -8,6 +8,7 @@ import socket
 import threading
 import json
 import time
+import argparse
 
 import pygame
 
@@ -19,8 +20,9 @@ from renderer import PygameRenderer
 class GameClient:
     """Cliente del shooter 2D multijugador."""
 
-    def __init__(self, host: str = HOST_CLIENT_DEFAULT) -> None:
+    def __init__(self, host: str = HOST_CLIENT_DEFAULT, port: int = PORT) -> None:
         self.host = host
+        self.port = port
         self.sock: socket.socket = None
         self.player_id: str = None
         self.snapshot: dict = None
@@ -29,8 +31,8 @@ class GameClient:
 
     def connect(self) -> None:
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        self.sock.connect((self.host, PORT))
-        print(f"[Cliente] Conectado a {self.host}:{PORT}")
+        self.sock.connect((self.host, self.port))
+        print(f"[Cliente] Conectado a {self.host}:{self.port}")
 
         # Leer mensaje de bienvenida para saber nuestro player_id
         buffer = ""
@@ -149,7 +151,8 @@ class GameClient:
 
 
 if __name__ == "__main__":
-    import sys
-
-    host = sys.argv[1] if len(sys.argv) > 1 else HOST
-    GameClient(host=host).run()
+    parser = argparse.ArgumentParser(description="Cliente Shooter 2D multijugador")
+    parser.add_argument("--host", type=str, default=HOST_CLIENT_DEFAULT, help="IP del servidor (default: 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=PORT, help="Puerto del servidor (default: 5555)")
+    args = parser.parse_args()
+    GameClient(host=args.host, port=args.port).run()

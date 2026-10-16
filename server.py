@@ -9,11 +9,11 @@ import socket
 import threading
 import json
 import time
+import argparse
 
 from common import HOST_SERVER, PORT, BUFFER_SIZE, encode, MSG_JOIN, MSG_INPUT
 from state import GameState
 from commands import Command
-import sys
 
 
 class GameServer:
@@ -169,8 +169,11 @@ class GameServer:
 
 
 if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="Servidor autoritativo Shooter 2D")
+    parser.add_argument("--port", type=int, default=PORT, help="Puerto de escucha (default: 5555)")
+    args = parser.parse_args()
     try:
-        GameServer().run()
+        GameServer(port=args.port).run()
     except Exception as e:
         print(f"\n[ERROR] El servidor falló al iniciar: {e}", flush=True)
         print("\nPresiona ENTER para cerrar...", flush=True)

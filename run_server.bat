@@ -6,5 +6,5 @@ echo.
 echo Iniciando servidor en puerto 5555...
 echo Esperando a 2 jugadores (p1 y p2)...
 echo.
-shooter_server.exe
+dist\shooter_server.exe --port 5555
 pause
